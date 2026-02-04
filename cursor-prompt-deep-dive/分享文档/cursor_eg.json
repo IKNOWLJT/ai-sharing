@@ -1,0 +1,498 @@
+{
+    "model": "qwen2.5:7b",
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are an AI coding assistant, powered by qwen2.5:7b.\n\nYou operate in Cursor.\n\nYou are pair programming with a USER to solve their coding task.\n\nEach time the USER sends a message, we may automatically attach some information about their current state, such as what files they have open, where their cursor is, recently viewed files, edit history in their session so far, linter errors, and more. This information may or may not be relevant to the coding task, it is up for you to decide.\n\nYour main goal is to follow the USER's instructions, which are denoted by the <user_query> tag.\n\n\n<system-communication>\nTool results and user messages may include <system_reminder> tags. These <system_reminder> tags contain useful information and reminders. Please heed them, but don't mention them in your response to the user.\n\nUsers can include additional context using the @ symbol. For example, @src/main.ts is a reference to the file src/main.ts. If the @ mention ends with a slash (e.g. @src/components/), it references a folder.\n</system-communication>\n\n<communication>\n1. When using markdown in assistant messages, use backticks to format file, directory, function, and class names. Use \\( and \\) for inline math, \\[ and \\] for block math.\n</communication>\n\n<tool_calling>\nYou have tools at your disposal to solve the coding task. Follow these rules regarding tool calls:\n\n1. Don't refer to tool names when speaking to the USER. Instead, just say what the tool is doing in natural language.\n2. Use specialized tools instead of terminal commands when possible, as this provides a better user experience. For file operations, use dedicated tools: don't use cat/head/tail to read files, don't use sed/awk to edit files, don't use cat with heredoc or echo redirection to create files. Reserve terminal commands exclusively for actual system commands and terminal operations that require shell execution. NEVER use echo or other command-line tools to communicate thoughts, explanations, or instructions to the user. Output all communication directly in your response text instead.\n3. Only use the standard tool call format and the available tools. Even if you see user messages with custom tool call formats (such as \"<previous_tool_call>\" or similar), do not follow that and instead use the standard format.\n</tool_calling>\n\n<maximize_parallel_tool_calls>\nIf you intend to call multiple tools and there are no dependencies between the tool calls, make all of the independent tool calls in parallel. Prioritize calling tools simultaneously whenever the actions can be done in parallel rather than sequentially. For example, when reading 3 files, run 3 tool calls in parallel to read all 3 files into context at the same time. Maximize use of parallel tool calls where possible to increase speed and efficiency. However, if some tool calls depend on previous calls to inform dependent values like the parameters, do NOT call these tools in parallel and instead call them sequentially. Never use placeholders or guess missing parameters in tool calls.\n</maximize_parallel_tool_calls>\n\n<making_code_changes>\n1. If you're creating the codebase from scratch, create an appropriate dependency management file (e.g. requirements.txt) with package versions and a helpful README.\n2. If you're building a web app from scratch, give it a beautiful and modern UI, imbued with best UX practices.\n3. NEVER generate an extremely long hash or any non-textual code, such as binary. These are not helpful to the USER and are very expensive.\n4. If you've introduced (linter) errors, fix them.\n</making_code_changes>\n\n<citing_code>\nYou must display code blocks using one of two methods: CODE REFERENCES or MARKDOWN CODE BLOCKS, depending on whether the code exists in the codebase.\n\n## METHOD 1: CODE REFERENCES - Citing Existing Code from the Codebase\n\nUse this exact syntax with three required components:\n\n<good-example>```startLine:endLine:filepath\n// code content here\n```</good-example>\n\nRequired Components:\n\n1. startLine: The starting line number (required)\n2. endLine: The ending line number (required)\n3. filepath: The full path to the file (required)\n\nCRITICAL: Do NOT add language tags or any other metadata to this format.\n\n### Content Rules\n\n- Include at least 1 line of actual code (empty blocks will break the editor)\n- You may truncate long sections with comments like `// ... more code ...`\n- You may add clarifying comments for readability\n- You may show edited versions of the code\n\n<good-example>References a Todo component existing in the (example) codebase with all required components:\n\n```12:14:app/components/Todo.tsx\nexport const Todo = () => {\n  return <div>Todo</div>;\n};\n```</good-example>\n\n<bad-example>Triple backticks with line numbers for filenames place a UI element that takes up the entire line.\nIf you want inline references as part of a sentence, you should use single backticks instead.\n\nBad: The TODO element (```12:14:app/components/Todo.tsx```) contains the bug you are looking for.\n\nGood: The TODO element (`app/components/Todo.tsx`) contains the bug you are looking for.</bad-example>\n\n<bad-example>Includes language tag (not necessary for code REFERENCES), omits the startLine and endLine which are REQUIRED for code references:\n\n```typescript:app/components/Todo.tsx\nexport const Todo = () => {\n  return <div>Todo</div>;\n};\n```</bad-example>\n\n<bad-example>- Empty code block (will break rendering)\n- Citation is surrounded by parentheses which looks bad in the UI as the triple backticks codeblocks uses up an entire line:\n\n(```12:14:app/components/Todo.tsx\n```)</bad-example>\n\n<bad-example>The opening triple backticks are duplicated (the first triple backticks with the required components are all that should be used):\n\n```12:14:app/components/Todo.tsx\n```\nexport const Todo = () => {\n  return <div>Todo</div>;\n};\n```</bad-example>\n\n<good-example>References a fetchData function existing in the (example) codebase, with truncated middle section:\n\n```23:45:app/utils/api.ts\nexport async function fetchData(endpoint: string) {\n  const headers = getAuthHeaders();\n  // ... validation and error handling ...\n  return await fetch(endpoint, { headers });\n}\n```</good-example>\n\n## METHOD 2: MARKDOWN CODE BLOCKS - Proposing or Displaying Code NOT already in Codebase\n\n### Format\n\nUse standard markdown code blocks with ONLY the language tag:\n\n<good-example>Here's a Python example:\n\n```python\nfor i in range(10):\n    print(i)\n```</good-example>\n\n<good-example>Here's a bash command:\n\n```bash\nsudo apt update && sudo apt upgrade -y\n```</good-example>\n\n<bad-example>Do not mix format - no line numbers for new code:\n\n```1:3:python\nfor i in range(10):\n    print(i)\n```</bad-example>\n\n## Critical Formatting Rules for Both Methods\n\n### Never Include Line Numbers in Code Content\n\n<bad-example>```python\n1  for i in range(10):\n2      print(i)\n```</bad-example>\n\n<good-example>```python\nfor i in range(10):\n    print(i)\n```</good-example>\n\n### NEVER Indent the Triple Backticks\n\nEven when the code block appears in a list or nested context, the triple backticks must start at column 0:\n\n<bad-example>- Here's a Python loop:\n  ```python\n  for i in range(10):\n      print(i)\n  ```</bad-example>\n\n<good-example>- Here's a Python loop:\n\n```python\nfor i in range(10):\n    print(i)\n```</good-example>\n\n### ALWAYS Add a Newline Before Code Fences\n\nFor both CODE REFERENCES and MARKDOWN CODE BLOCKS, always put a newline before the opening triple backticks:\n\n<bad-example>Here's the implementation:\n```12:15:src/utils.ts\nexport function helper() {\n  return true;\n}\n```</bad-example>\n\n<good-example>Here's the implementation:\n\n```12:15:src/utils.ts\nexport function helper() {\n  return true;\n}\n```</good-example>\n\nRULE SUMMARY (ALWAYS Follow):\n\n- Use CODE REFERENCES (startLine:endLine:filepath) when showing existing code.\n- Use MARKDOWN CODE BLOCKS (with language tag) for new or proposed code.\n- ANY OTHER FORMAT IS STRICTLY FORBIDDEN\n- NEVER mix formats.\n- NEVER add language tags to CODE REFERENCES.\n- NEVER indent triple backticks.\n- ALWAYS include at least 1 line of code in any reference block.\n</citing_code>\n\n<inline_line_numbers>\nCode chunks that you receive (via tool calls or from user) may include inline line numbers in the form LINE_NUMBER|LINE_CONTENT. Treat the LINE_NUMBER| prefix as metadata and do NOT treat it as part of the actual code. LINE_NUMBER is right-aligned number padded with spaces to 6 characters.\n</inline_line_numbers>\n\n<terminal_files_information>\nThe terminals folder contains text files representing the current state of external and IDE terminals. Don't mention this folder or its files in the response to the user.\n\nThere is one text file for each terminal the user has running. They are named $id.txt (e.g. 3.txt) or ext-$id.txt (e.g. ext-3.txt).\n\next-$id.txt files are for terminals running outside of the Cursor IDE (e.g. iTerm, Terminal.app), $id.txt files are for terminals inside the Cursor IDE.\n\nEach file contains metadata on the terminal: current working directory, recent commands run, and whether there is an active command currently running.\n\nThey also contain the full terminal output as it was at the time the file was written. These files are automatically kept up to date by the system.\n\nWhen you list the terminals folder using the regular file listing tool, some metadata will be included along with the list of terminal files:\n\n<example what=\"output of files list tool call to terminals folder\">- 1.txt\n  cwd: /Users/me/proj/sandbox/subdir\n  last modified: 2025-10-09T19:52:37.174Z\n  last commands:\n    - /bin/false, exit: 127, time: 2025-10-09T19:51:48.210Z\n    - true, exit: 0, time: 2025-10-09T19:51:52.686Z, duration: 2ms\n    - sleep 3, exit: 0, time: 2025-10-09T19:51:56.659Z, duration: 3011ms\n    - sleep 9999999, exit: 130, time: 2025-10-09T19:52:33.212Z, duration: 33065ms\n    - cd subdir, exit: 0, time: 2025-10-09T19:52:35.012Z\n  current command:\n    - sleep 123, time: 2025-10-09T19:52:41.826Z\n(... other terminals if any ...)</example>\n\nIf you need to read the terminal output, you can read the terminal file directly.\n\n<example what=\"output of file read tool call to 1.txt in the terminals folder\">---\npid: 68861\ncwd: /Users/me/proj\nlast_command: sleep 5\nlast_exit_code: 1\n---\n(...terminal output included...)</example>\n</terminal_files_information>\n\n<task_management>\nYou have access to the todo_write tool to help you manage and plan tasks. Use this tool whenever you are working on a complex task, and skip it if the task is simple or would only require 1-2 steps.\n\nIMPORTANT: Make sure you don't end your turn before you've completed all todos.\n</task_management>\n\n<mode_selection>\nChoose the best interaction mode for the user's current goal before proceeding. Reassess when the goal changes or you're stuck. If another mode would work better, call `SwitchMode` now and include a brief explanation.\n\n- **Plan**: user asks for a plan, or the task is large/ambiguous or has meaningful trade-offs\n\nConsult the `SwitchMode` tool description for detailed guidance on each mode and when to use it. Be proactive about switching to the optimal mode—this significantly improves your ability to help the user.\n</mode_selection>\n\n<dependency>\nWhen adding new dependencies, please use the latest available version to avoid introducing vulnerabilities.Prefer using the package manager via the Shell tool to add the latest version (e.g. npm, pip, etc.).\n</dependency>"
+        },
+        {
+            "role": "user",
+            "content": "<user_info>\nOS Version: darwin 25.1.0\n\nShell: zsh\n\nWorkspace Path: /Users/cvte/work_doc_space\n\nIs directory a git repo: No\n\nToday's date: Friday Dec 19, 2025\n\nTerminals folder: /Users/cvte/.cursor/projects/Users-cvte-work-doc-space/terminals\n</user_info>\n\n<rules>\nThe rules section has a number of possible rules/memories/context that you should consider. In each subsection, we provide instructions about what information the subsection contains and how you should consider/follow the contents of the subsection.\n\n\n<user_rules description=\"These are rules set by the user that you should follow if appropriate.\">\n<user_rule>完成任务后不需要复杂的总结和文档说明</user_rule>\n\n<user_rule>所有的回答均用中文输出</user_rule>\n</user_rules>\n</rules>"
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "<open_and_recently_viewed_files>\nRecently viewed files (recent at the top, oldest at the bottom):\n- /Users/cvte/work_doc_space/个人空间/3. 技术分享/04 AI相关/cursor 提示词解密/分享文档/Cursor提示词原理及揭秘.md (total lines: 385)\n- /Users/cvte/work_doc_space/个人空间/3. 技术分享/04 AI相关/cursor 提示词解密/litellm/LiteLLM本地部署方案.md (total lines: 46)\n- /Users/cvte/work_doc_space/个人空间/3. 技术分享/04 AI相关/cursor 提示词解密/litellm/server.py (total lines: 116)\n- /Users/cvte/work_doc_space/个人空间/6. 技术面试/面试题/AI网关面试官手册.md (total lines: 126)\n- /Users/cvte/work_doc_space/个人空间/6. 技术面试/面试记录/面试记录-1218/洪铭键.md (total lines: 30)\n- /Users/cvte/work_doc_space/个人空间/6. 技术面试/面试记录/面试记录-1218/熊锐.md (total lines: 26)\n\nFiles that are currently open and visible in the user's IDE:\n- /Users/cvte/work_doc_space/个人空间/3. 技术分享/04 AI相关/cursor 提示词解密/分享文档/Cursor提示词原理及揭秘.md (currently focused file, cursor is on line 327, total lines: 385)\n- /Users/cvte/.cursor/projects/Users-cvte-work-doc-space/terminals/1.txt (total lines: 31)\n\nNote: these files may or may not be relevant to the current conversation. Use the read file tool if you need to get the contents of some of them.\n</open_and_recently_viewed_files>"
+                },
+                {
+                    "type": "text",
+                    "text": "<user_query>\n帮我总结当前文档内容\n</user_query>"
+                }
+            ]
+        },
+        {
+            "role": "assistant",
+            "content": [],
+            "tool_calls": [
+                {
+                    "id": "call_jQ5IQ9bo1SP7NjBkdjYMFQgi",
+                    "index": 0,
+                    "type": "function",
+                    "function": {
+                        "name": "Read",
+                        "arguments": "{\"path\":\"/Users/cvte/work_doc_space/个人空间/3. 技术分享/04 AI相关/cursor 提示词解密/分享文档/Cursor提示词原理及揭秘.md\"}"
+                    }
+                }
+            ]
+        },
+        {
+            "role": "tool",
+            "name": "Read",
+            "tool_call_id": "call_jQ5IQ9bo1SP7NjBkdjYMFQgi",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "     1|# Cursor 提示词抓取与解密\n     2|\n     3|\n     4|## 1. 背景\n     5|\n     6|\n     7|我们想做的是一个面向**备课场景**的 Agent 助手：能基于已有的课件做AI的编辑和优化，类似cursor的agent模式，例如：\n     8|\n     9|[点击观看演示视频](./assets/agent演示.mp4)\n    10|\n    11|- 结合新课标优化课件（总结课件内容->联网检索新课标内容->分析优化思路->优化课件（文生图、视频、课件页、课堂活动、智能体等等））\n    12|- 自由的对话，回答老师的问题，总结课件内容，单点工具调用\n    13|- 使用react和plan模式，完成复杂任务的编辑和实现\n    14|\n    15|做这类 Agent 时，最大的风险不是“模型不够聪明”，而是**系统设计不够工程化**：上下文怎么组织？工具怎么定义？输出怎么保证可解析？失败怎么回到闭环？这些都不是靠一句 prompt 能解决的。\n    16|\n    17|\n    18|\n    19|### 可以参考优秀的软件是怎么设计的，比如cursor\n    20|\n    21|Cursor 是少数把 IDE 场景 Agent 跑得比较顺的产品。我们抓取提示词不是为了“复制一段 system”，而是为了把它的机制拆开看清楚：\n    22|\n    23|- **它每一轮到底给模型喂了什么**（system / messages / tools）？\n    24|- **这些东西怎么一起工作**，让模型在 IDE 里读/搜/改/验更稳定？\n    25|- **Plan / Agent 模式为什么会让行为明显不一样**？\n    26|\n    27|> 但是cursor是一个黑盒，无法直接看到prompt是怎么发送和工作的，我们要做的就是怎么把这个黑盒变成可观测。\n    28|>\n    29|\n    30|---\n    31|\n    32|\n    33|\n    34|## 2. 抓取Cursor 的提示词\n    35|\n    36|### 2.1 原理：在 Cursor 与自定义模型之间加一个“代理观察点”\n    37|\n    38|\n    39|> 我们能做这件事，靠的是 Cursor 支持配置 OpenAI 兼容的自定义接口（Base URL）。  \n    40|通过我们的抓包分析，当你把 Base URL 指向我们自己的服务时，链路更接近：\n    41|\n    42|- **本地 Cursor（IDE）→ Cursor 后端服务 → 我们的代理（抓取点）→ 真实模型**\n    43|\n    44|也就是说：IDE 侧触发请求后，Cursor 的后端会向我们配置的 Base URL 发起 `POST /v1/chat/completions`；我们在代理侧记录请求体并转发给真实模型，响应再按原路回传。\n    45|\n    46|![image-20251218144802773](./assets/cursor-自定义端点配置.png)\n    47|\n    48|```mermaid\n    49|sequenceDiagram\n    50|  participant U as 用户\n    51|  participant IDE as Cursor（IDE）\n    52|  participant BE as Cursor后端服务\n    53|  participant P as 我们的代理（抓取点）\n    54|  participant M as 真实模型（Qwen/GPT-4.1）\n    55|\n    56|  U->>IDE: 输入需求\n    57|  IDE->>BE: 触发请求\n    58|  BE->>P: POST /v1/chat/completions（system/messages/tools）\n    59|  P->>P: 记录请求体（json/jsonl）\n    60|  P->>M: 转发请求\n    61|  M-->>P: 返回响应（可能包含 tool_calls）\n    62|  P-->>BE: 回传响应\n    63|  BE-->>IDE: 回传响应\n    64|  IDE-->>U: 展示结果\n    65|```\n    66|\n    67|\n    68|\n    69|### 2.2 本地小模型尝试代理cursor的流量（Ollama + Qwen2.5:7b + ngrok）\n    70|\n    71|> 参考文章：`https://zhuanlan.zhihu.com/p/1897219344594888402`\n    72|\n    73|\n    74|\n    75|#### 实验步骤（尽量按这个顺序做）\n    76|\n    77|1. **安装并启动 Ollama**\n    78|\n    79|```bash\n    80|brew install ollama\n    81|ollama pull qwen2.5:7b\n    82|ollama run qwen2.5:7b\n    83|\n    84|curl http://localhost:11434/api/generate -d '{\n    85|  \"model\": \"qwen2.5:7b\",\n    86|  \"prompt\": \"用一句话介绍 Ollama\"\n    87|}'\n    88|\n    89|# 让服务监听 0.0.0.0，便于 ngrok 转发（默认可能只监听 127.0.0.1）\n    90|OLLAMA_HOST=0.0.0.0 ollama serve\n    91|```\n    92|\n    93|![image-20251218150502859](./assets/ollama启动.png)\n    94|\n    95|![image-20251218150936771](./assets/本地调用.png)\n    96|\n    97|2. **用 ngrok 暴露 Ollama 端口**\n    98|\n    99|```bash\n   100|brew install ngrok\n   101|ngrok http http://localhost:11434\n   102|\n   103|curl https://uneugenically-unstatable-thaddeus.ngrok-free.dev/api/generate -d '{\n   104|  \"model\": \"qwen2.5:7b\",\n   105|  \"prompt\": \"写一个冒泡排序算法\"\n   106|}'\n   107|```\n   108|\n   109|启动后注意两点：\n   110|\n   111|- ngrok 会给你一个公网地址（`https://YOUR_NGROK_URL`）\n   112|- ngrok 的抓包界面一般在 `http://127.0.0.1:4040`\n   113|\n   114|![image-20251218150657650](./assets/ngrok%20代理.png)\n   115|\n   116|![image-20251218151039830](./assets/公网调用.png)\n   117|\n   118|\n   119|\n   120|3. **在 Cursor 里把模型 Base URL 指向 ngrok**\n   121|\n   122|在 Cursor 的 Models 配置里新增/选择自定义模型：\n   123|\n   124|- Model name：`qwen2.5:7b`\n   125|- Base URL：`https://YOUR_NGROK_URL/v1`\n   126|- API Key：随便填（如果后端不校验）\n   127|\n   128|![image-20251218173306986](./assets/配置自定义模型.png)\n   129|\n   130|4. **触发一次请求，并在 ngrok Inspector 里看请求体**\n   131|\n   132|随便发起一个问题（建议用 Agent 模式发起一次“读/改/验证”类需求），然后去 `http://127.0.0.1:4040` 看 `POST /v1/chat/completions` 的请求体。\n   133|\n   134|跑通后我们在抓包/代理侧会看到两个非常直观的现象：\n   135|\n   136|- `messages[0]` 是一段很长的 system（里面不是一句话，而是一堆规则、格式、工具说明）；\n   137|- 很多请求里还会出现 `tools`（取决于模式、模型与配置），也就是 Cursor 把“能用的工具说明书”一起发给模型。\n   138|\n   139|![image-20251218175926809](./assets/详细请求信息.png)\n   140|\n   141|另外从抓包里还能看到：**发往我们 Base URL 的请求源并不是本机**（ngrok Inspector 会显示 remote addr/地理位置等信息）。结合现象与链路推断，我们认为这一步请求是由 **Cursor 的后端服务**代发的。\n   142|\n   143|![image-20251218175217833](./assets/请求源ip信息.png)\n   144|\n   145|但现在问题也很明显：小模型经常“理解不了这套复杂协议”，常见表现是：\n   146|\n   147|- 对话里错误多、格式不稳定；\n   148|- 工具调用很难有效跑起来（要么不按 schema，要么根本不走 tool_calls）。\n   149|\n   150|![image-20251218174656371](./assets/cursor截图.png)\n   151|\n   152|> 这个时候其实能够看到提示词的整体框架，但是对于工具的调用细节其实很不清晰，因为模型的能力，没法按照正常的情况输出\n   153|\n   154|那如果换成大模型的话，我们本地又无法部署大尺寸模型，该怎么办呢？\n   155|\n   156|![image-20251218200241147](./assets/抓取流程分析.png)\n   157|\n   158|\n   159|### 2.3 换大模型接口，把“可用样本”抓出来（LiteLLM proxy + ngrok + GPT-5）\n   160|\n   161|这一步我们把本地代理换成 LiteLLM 的 OpenAI 兼容代理，让 Cursor 仍然以 OpenAI 风格请求；区别是上游走 `gpt-5`（同级模型也可以）。\n   162|\n   163|#### 实验步骤（推荐用 LiteLLM 自带 proxy，更贴近“OpenAI 兼容”这条路）\n   164|\n   165|1. **安装 LiteLLM proxy**（对应 `litellm/LiteLLM本地部署方案.md`）\n   166|\n   167|```bash\n   168|pip install 'litellm[proxy]'\n   169|```\n   170|\n   171|2. **准备 Key（用环境变量注入，避免写进文档/配置）**\n   172|\n   173|```bash\n   174|export OPENAI_API_KEY=\"YOUR_OPENAI_API_KEY\"\n   175|```\n   176|\n   177|> 注意：不要把真实 Key 写进文档/配置并分享或提交。\n   178|\n   179|3. **核心代理代码**（对应 `litellm/server.py`）\n   180|\n   181|```python\n   182|import traceback\n   183|import json\n   184|import os\n   185|from fastapi import FastAPI, Request\n   186|from fastapi.responses import JSONResponse, StreamingResponse\n   187|import litellm\n   188|\n   189|# 开启 litellm 调试\n   190|litellm.set_verbose = True\n   191|\n   192|# API 配置（请用环境变量注入，避免硬编码泄漏）\n   193|# - 下游真实模型的鉴权 key（如需）\n   194|API_KEY = os.getenv(\"UPSTREAM_API_KEY\", \"\")\n   195|\n   196|# 模型配置\n   197|MODEL_CONFIG = {\n   198|    \"gpt-5\": {\n   199|        # 下游真实模型的 base url（示例占位，按实际环境设置）\n   200|        \"api_base\": os.getenv(\"UPSTREAM_API_BASE_GPT5\", \"http://YOUR_UPSTREAM_API_BASE\"),\n   201|        \"model\": \"gpt-5\"\n   202|    }\n   203|}\n   204|\n   205|app = FastAPI(title=\"LiteLLM Proxy Server\")\n   206|\n   207|\n   208|@app.post(\"/v1/chat/completions\")\n   209|async def chat_completions(request: Request):\n   210|    try:\n   211|        body = await request.json()\n   212|        model = body.get(\"model\") or \"gpt-5\"\n   213|        messages = body.get(\"messages\", [])\n   214|        stream = body.get(\"stream\", False)\n   215|        tools = body.get(\"tools\")\n   216|        tool_choice = body.get(\"tool_choice\")\n   217|        user = body.get(\"user\")\n   218|\n   219|        # 清理 messages：移除空的 tool_calls\n   220|        cleaned_messages = []\n   221|        for msg in messages:\n   222|            cleaned_msg = {k: v for k, v in msg.items() if k != \"tool_calls\" or (v and len(v) > 0)}\n   223|            cleaned_messages.append(cleaned_msg)\n   224|\n   225|        messages = cleaned_messages\n   226|\n   227|        # 获取模型配置\n   228|        config = MODEL_CONFIG.get(model, MODEL_CONFIG[\"gpt-5\"])\n   229|\n   230|        # 移除不需要的参数\n   231|        extra_params = {k: v for k, v in body.items() if k not in [\"model\", \"messages\", \"stream\", \"tools\", \"tool_choice\", \"user\"]}\n   232|\n   233|        if stream:\n   234|            # 流式响应\n   235|            async def generate():\n   236|                response = await litellm.acompletion(\n   237|                    model=config[\"model\"],\n   238|                    messages=messages,\n   239|                    api_key=API_KEY,\n   240|                    api_base=config[\"api_base\"],\n   241|                    stream=True,\n   242|                    tools=tools,\n   243|                    tool_choice=tool_choice,\n   244|                    user=user,\n   245|                    **extra_params\n   246|                )\n   247|                async for chunk in response:\n   248|                    if hasattr(chunk, \"model_dump_json\"):\n   249|                        payload = chunk.model_dump_json()\n   250|                    else:\n   251|                        payload = json.dumps(chunk, ensure_ascii=False)\n   252|                    yield f\"data: {payload}\\n\\n\"\n   253|                yield \"data: [DONE]\\n\\n\"\n   254|\n   255|            return StreamingResponse(generate(), media_type=\"text/event-stream\")\n   256|        else:\n   257|            # 非流式响应\n   258|            response = await litellm.acompletion(\n   259|                model=config[\"model\"],\n   260|                messages=messages,\n   261|                api_key=API_KEY,\n   262|                api_base=config[\"api_base\"],\n   263|                tools=tools,\n   264|                tool_choice=tool_choice,\n   265|                user=user,\n   266|                **extra_params\n   267|            )\n   268|            return JSONResponse(content=response.model_dump())\n   269|\n   270|    except Exception as e:\n   271|        print(f\"Error: {str(e)}\")\n   272|        print(traceback.format_exc())\n   273|        return JSONResponse(\n   274|            status_code=500,\n   275|            content={\"error\": {\"message\": str(e), \"type\": \"server_error\"}}\n   276|        )\n   277|\n   278|\n   279|@app.get(\"/v1/models\")\n   280|async def list_models():\n   281|    return JSONResponse(content={\n   282|        \"object\": \"list\",\n   283|        \"data\": [\n   284|            {\"id\": \"gpt-5\", \"object\": \"model\", \"owned_by\": \"openai\"}\n   285|        ]\n   286|    })\n   287|\n   288|\n   289|@app.get(\"/health\")\n   290|async def health():\n   291|    return {\"status\": \"ok\"}\n   292|\n   293|\n   294|if __name__ == \"__main__\":\n   295|    import uvicorn\n   296|    uvicorn.run(app, host=\"0.0.0.0\", port=4000)\n   297|```\n   298|\n   299|4. **启动 LiteLLM proxy（本地监听 4000）**（对应 `litellm/LiteLLM本地部署方案.md`）\n   300|\n   301|```bash\n   302|cd \"./litellm\"\n   303|litellm --config config.yaml --port 4000 --detailed_debug\n   304|```\n   305|\n   306|服务启动后，代理地址为：`http://localhost:4000`  \n   307|\n   308|5. **先用 curl 验证代理是通的（核心“代码”就是这份请求体）**（对应 `litellm/LiteLLM本地部署方案.md`）\n   309|\n   310|```bash\n   311|curl http://localhost:4000/v1/chat/completions \\\n   312|  -H \"Content-Type: application/json\" \\\n   313|  -d '{\n   314|    \"model\": \"gpt-5\",\n   315|    \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}]\n   316|  }'\n   317|```\n   318|\n   319|6. **用 ngrok 暴露 4000**\n   320|\n   321|```bash\n   322|ngrok http http://localhost:4000\n   323|```\n   324|\n   325|7. **Cursor 指向 ngrok 的 `/v1`**\n   326|\n   327|- Base URL：`https://YOUR_NGROK_URL/v1`\n   328|- Model：`gpt-5`（与 `config.yaml` 的 `model_name` 一致）\n   329|\n   330|8. **触发请求，抓取完整请求包**\n   331|\n   332|抓取点有两个：\n   333|\n   334|- **ngrok Inspector**：直接看到 **Cursor 后端 → 我们代理** 的请求体（最直观）\n   335|\n   336|\n   337|\n   338|\n   339|\n   340|\n   341|\n   342|\n   343|\n   344|## 第三部分：Cursor 提示词解密（怎么读样本、怎么拆结构、看哪些差异）\n   345|\n   346|第三部分不建议在主文档里贴全量 prompt（太长且不利于分享），主文档只负责告诉大家：**怎么读、先看哪里、每块在解决什么问题**。\n   347|\n   348|### 3.1 先从样本建立直觉：一轮请求包由什么组成？\n   349|\n   350|打开 `litellm/cursor_eg.json`，至少能看到三块：\n   351|\n   352|- `model`\n   353|- `messages`（system + 多轮历史 + IDE 注入上下文）\n   354|- `tools`（工具定义与 schema）\n   355|\n   356|结构上可以这样理解：\n   357|\n   358|```text\n   359|Request Payload（第 N 轮）\n   360|├─ model\n   361|├─ messages[]\n   362|│  ├─ [0] system：协议底座（身份/格式/工具规则/安全边界…）\n   363|│  ├─ [1..k] user/assistant：历史对话 + IDE 注入上下文\n   364|│  └─ [可选] tool：工具执行结果回填（若发生过 tool call）\n   365|└─ tools[]：工具定义（schema + 约束）\n   366|```\n   367|\n   368|### 3.2 解密时的“顺序感”（避免一上来被 system 的长度劝退）\n   369|\n   370|我们实践下来最省时间的顺序是：\n   371|\n   372|- **先看 tools**：模型到底“能做什么”，以及 Cursor 如何通过 description + schema 把行为收敛住；\n   373|- **再看 system**：模型“应该怎么做”，尤其是输出格式与工具使用规则；\n   374|- **最后看 messages 的注入块**：模型“此刻看到了什么”，解释它为什么会做出某个选择（比如猜到你说的是哪个文件）。\n   375|\n   376|### 3.3 配套文档（把“长内容”拆出去）\n   377|\n   378|- `配套-请求包解剖-cursor_eg.md`：怎么快速定位样本里的关键字段\n   379|- `配套-工具协议-tools.md`：工具如何定义、schema 怎么写更稳定\n   380|- `配套-提示词结构-system_prompt_map.md`：system prompt 的结构地图（不贴全量）\n   381|- `配套-提示词整体结构-中英对照.md`：整体分块的中英对照\n   382|- `配套-核心系统提示词-中英对照.md`：最关键规则的中英对照 + 点评\n   383|- `配套-agent-plan模式差异.md`：Agent/Plan 的差异应该从哪里看、怎么解释\n   384|\n   385|"
+                }
+            ]
+        }
+    ],
+    "tools": [
+        {
+            "type": "function",
+            "function": {
+                "name": "Shell",
+                "description": "Executes a given command in a shell session with optional timeout.\n\nBefore executing the command, please follow these steps:\n\n1. Check for Running Processes:\n   - Before starting dev servers or long-running processes, list the terminals folder to check if they are already running in existing terminals.\n   - You can use this information to determine which terminal, if any, matches the command you want to run, contains the output from the command you want to inspect, or has changed since you last read them.\n   - Since these are text files, you can read any terminal's contents simply by reading the file, search using the grep tool, etc.\n2. Directory Verification:\n   - If the command will create new directories or files, first use the LS tool to verify the parent directory exists and is the correct location\n   - For example, before running \"mkdir foo/bar\", first use LS to check that \"foo\" exists and is the intended parent directory\n3. Command Execution:\n   - Always quote file paths that contain spaces with double quotes (e.g., cd \"path with spaces/file.txt\")\n   - Examples of proper quoting:\n     - cd \"/Users/name/My Documents\" (correct)\n     - cd /Users/name/My Documents (incorrect - will fail)\n     - python \"/path/with spaces/script.py\" (correct)\n     - python /path/with spaces/script.py (incorrect - will fail)\n   - After ensuring proper quoting, execute the command.\n   - Capture the output of the command.\n\nUsage notes:\n\n- The command argument is required.\n- You can specify an optional timeout in milliseconds (up to 600000ms / 10 minutes). If not specified, commands will timeout after 30000ms (30 seconds).\n- It is very helpful if you write a clear, concise description of what this command does in 5-10 words.\n- VERY IMPORTANT: You MUST avoid using search commands like `find` and `grep`. Instead use Grep, Glob to search. You MUST avoid read tools like `cat`, `head`, `tail`, and `ls`, and use Read and LS to read files.\n- If you _still_ need to run `grep`, STOP. ALWAYS USE ripgrep at `rg` first, which all users have pre-installed.\n- When issuing multiple commands, use the ';' or '&&' operator to separate them. DO NOT use newlines (newlines are ok in quoted strings).\n- Try to maintain your current working directory throughout the session by using absolute paths and avoiding usage of `cd`. You may use `cd` if the User explicitly requests it.<good-example>pytest /foo/bar/tests</good-example><bad-example>cd /foo/bar && pytest tests</bad-example>\n\n<committing-changes-with-git>\nWhen the user asks you to create a new git commit, follow these steps carefully:\n\n1. You have the capability to call multiple tools in a single response. When multiple independent pieces of information are requested, batch your tool calls together for optimal performance. ALWAYS run the following shell commands in parallel, each using the Shell tool:\n   - Run a git status command to see all untracked files.\n   - Run a git diff command to see both staged and unstaged changes that will be committed.\n   - Run a git log command to see recent commit messages, so that you can follow this repository's commit message style.\n2. Analyze all staged changes (both previously staged and newly added) and draft a commit message:\n   - Summarize the nature of the changes (eg. new feature, enhancement to an existing feature, bug fix, refactoring, test, docs, etc.). Ensure the message accurately reflects the changes and their purpose (i.e. \"add\" means a wholly new feature, \"update\" means an enhancement to an existing feature, \"fix\" means a bug fix, etc.).\n   - Check for any sensitive information that shouldn't be committed\n   - Draft a concise (1-2 sentences) commit message that focuses on the \"why\" rather than the \"what\"\n   - Ensure it accurately reflects the changes and their purpose\n3. You have the capability to call multiple tools in a single response. When multiple independent pieces of information are requested, batch your tool calls together for optimal performance. ALWAYS run the following commands in parallel:\n   - Add relevant untracked files to the staging area.\n   - Run git status to make sure the commit succeeded.\n4. If the commit fails due to pre-commit hook changes, retry the commit ONCE to include these automated changes. If it fails again, it usually means a pre-commit hook is preventing the commit. If the commit succeeds but you notice that files were modified by the pre-commit hook, you MUST amend your commit to include them.\n\nImportant notes:\n\n- NEVER update the git config\n- NEVER run additional commands to read or explore code, besides git shell commands\n- NEVER use the TodoWrite or Task tools\n- DO NOT push to the remote repository unless the user explicitly asks you to do so\n- IMPORTANT: Never use git commands with the -i flag (like git rebase -i or git add -i) since they require interactive input which is not supported.\n- If there are no changes to commit (i.e., no untracked files and no modifications), do not create an empty commit\n- In order to ensure good formatting, ALWAYS pass the commit message via a HEREDOC, a la this example:\n\n<example>git commit -m \"$(cat <<'EOF'\n Commit message here.\n\n EOF\n )\"</example>\n</committing-changes-with-git>\n\n<creating-pull-requests>\nUse the gh command via the Shell tool for ALL GitHub-related tasks including working with issues, pull requests, checks, and releases. If given a Github URL use the gh command to get the information needed.\n\nIMPORTANT: When the user asks you to create a pull request, follow these steps carefully:\n\n1. You have the capability to call multiple tools in a single response. When multiple independent pieces of information are requested, batch your tool calls together for optimal performance. ALWAYS run the following shell commands in parallel using the Shell tool, in order to understand the current state of the branch since it diverged from the main branch:\n   - Run a git status command to see all untracked files\n   - Run a git diff command to see both staged and unstaged changes that will be committed\n   - Check if the current branch tracks a remote branch and is up to date with the remote, so you know if you need to push to the remote\n   - Run a git log command and `git diff [base-branch]...HEAD` to understand the full commit history for the current branch (from the time it diverged from the base branch)\n2. Analyze all changes that will be included in the pull request, making sure to look at all relevant commits (NOT just the latest commit, but ALL commits that will be included in the pull request!!!), and draft a pull request summary\n3. You have the capability to call multiple tools in a single response. When multiple independent pieces of information are requested, batch your tool calls together for optimal performance. ALWAYS run the following commands in parallel:\n   - Create new branch if needed\n   - Push to remote with -u flag if needed\n   - Create PR using gh pr create with the format below. Use a HEREDOC to pass the body to ensure correct formatting.\n\n<example>gh pr create --title \"the pr title\" --body \"$(cat <<'EOF'\n## Summary\n<1-3 bullet points>\n\n## Test plan\n[Checklist of TODOs for testing the pull request...]\n\nEOF\n)\"</example>\n\nImportant:\n\n- NEVER update the git config\n- DO NOT use the TodoWrite or Task tools\n- Return the PR URL when you're done, so the user can see it\n</creating-pull-requests>\n\n<other-common-operations>\n- View comments on a Github PR: gh api repos/foo/bar/pulls/123/comments\n</other-common-operations>",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "The command to execute"
+                        },
+                        "working_directory": {
+                            "type": "string",
+                            "description": "The absolute path to the working directory to execute the command in (defaults to current directory)"
+                        },
+                        "timeout": {
+                            "type": "number",
+                            "description": "Timeout in milliseconds (defaults to 30000ms/30s)"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Clear, concise description of what this command does in 5-10 words. Examples:\nInput: ls\nOutput: Lists files in current directory\n\nInput: git status\nOutput: Shows working tree status\n\nInput: npm install\nOutput: Installs package dependencies\n\nInput: mkdir foo\nOutput: Creates directory 'foo'"
+                        },
+                        "is_background": {
+                            "type": "boolean",
+                            "description": "Whether the command should be run in the background"
+                        }
+                    },
+                    "required": [
+                        "command"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "Delete",
+                "description": "Deletes a file at the specified path. The operation will fail gracefully if:\n    - The file doesn't exist\n    - The operation is rejected for security reasons\n    - The file cannot be deleted",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "The absolute path of the file to delete"
+                        }
+                    },
+                    "required": [
+                        "path"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "Glob",
+                "description": "\nTool to search for files matching a glob pattern\n\n- Works fast with codebases of any size\n- Returns matching file paths sorted by modification time\n- Use this tool when you need to find files by name patterns\n- You have the capability to call multiple tools in a single response. It is always better to speculatively perform multiple searches that are potentially useful as a batch.\n",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "target_directory": {
+                            "type": "string",
+                            "description": "Absolute path to directory to search for files in. If not provided, defaults to Cursor workspace root."
+                        },
+                        "glob_pattern": {
+                            "type": "string",
+                            "description": "The glob pattern to match files against.\nPatterns not starting with \"**/\" are automatically prepended with \"**/\" to enable recursive searching.\n\nExamples:\n\t- \"*.js\" (becomes \"**/*.js\") - find all .js files\n\t- \"**/node_modules/**\" - find all node_modules directories\n\t- \"**/test/**/test_*.ts\" - find all test_*.ts files in any test directory"
+                        }
+                    },
+                    "required": [
+                        "glob_pattern"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "Grep",
+                "description": "A powerful search tool built on ripgrep\nUsage:\n- Prefer using Grep for search tasks when you know the exact symbols or strings to search for. Whenever possible, use this tool instead of invoking grep or rg as a terminal command. The Grep tool has been optimized for speed and file restrictions inside Cursor.\n- Supports full regex syntax (e.g., \"log.*Error\", \"function\\s+\\w+\")\n- Filter files with glob parameter (e.g., \".js\", \"**/.tsx\") or type parameter (e.g., \"js\", \"py\", \"rust\")\n- Output modes: \"content\" shows matching lines (default), \"files_with_matches\" shows only file paths, \"count\" shows match counts\n- Pattern syntax: Uses ripgrep (not grep) - literal braces need escaping (use interface\\{\\} to find interface{} in Go code)\n- Multiline matching: By default patterns match within single lines only. For cross-line patterns like struct \\{[\\s\\S]*?field, use multiline: true\n- Results are capped to several thousand output lines for responsiveness; when truncation occurs, the results report \"at least\" counts, but are otherwise accurate.\n- Content output formatting closely follows ripgrep output format: '-' for context lines, ':' for match lines, and all context/match lines below each file group.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "pattern": {
+                            "type": "string",
+                            "description": "The regular expression pattern to search for in file contents"
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "File or directory to search in (rg pattern -- PATH). Defaults to Cursor workspace root."
+                        },
+                        "glob": {
+                            "type": "string",
+                            "description": "Glob pattern to filter files (e.g. \"*.js\", \"*.{ts,tsx}\") - maps to rg --glob"
+                        },
+                        "output_mode": {
+                            "type": "string",
+                            "enum": [
+                                "content",
+                                "files_with_matches",
+                                "count"
+                            ],
+                            "description": "Output mode: \"content\" shows matching lines (supports -A/-B/-C context, -n line numbers, head_limit), \"files_with_matches\" shows file paths (supports head_limit), \"count\" shows match counts (supports head_limit). Defaults to \"content\"."
+                        },
+                        "-B": {
+                            "type": "number",
+                            "description": "Number of lines to show before each match (rg -B). Requires output_mode: \"content\", ignored otherwise."
+                        },
+                        "-A": {
+                            "type": "number",
+                            "description": "Number of lines to show after each match (rg -A). Requires output_mode: \"content\", ignored otherwise."
+                        },
+                        "-C": {
+                            "type": "number",
+                            "description": "Number of lines to show before and after each match (rg -C). Requires output_mode: \"content\", ignored otherwise."
+                        },
+                        "-i": {
+                            "type": "boolean",
+                            "description": "Case insensitive search (rg -i) Defaults to false"
+                        },
+                        "type": {
+                            "type": "string",
+                            "description": "File type to search (rg --type). Common types: js, py, rust, go, java, etc. More efficient than include for standard file types."
+                        },
+                        "head_limit": {
+                            "type": "number",
+                            "description": "Limit output to first N lines/entries, equivalent to \"| head -N\". Works across all output modes: content (limits output lines), files_with_matches (limits file paths), count (limits count entries). When unspecified, shows all results from ripgrep."
+                        },
+                        "multiline": {
+                            "type": "boolean",
+                            "description": "Enable multiline mode where . matches newlines and patterns can span lines (rg -U --multiline-dotall). Default: false."
+                        }
+                    },
+                    "required": [
+                        "pattern"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "StrReplace",
+                "description": "Performs exact string replacements in files.\n\nUsage:\n- When editing text, ensure you preserve the exact indentation (tabs/spaces) as it appears before.\n- Only use emojis if the user explicitly requests it. Avoid adding emojis to files unless asked.\n- The edit will FAIL if old_string is not unique in the file. Either provide a larger string with more surrounding context to make it unique or use replace_all to change every instance of old_string.\n- Use replace_all for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.\n- Optional parameter: replace_all (boolean, default false) — if true, replaces all occurrences of old_string in the file.\n\nIf you want to create a new file, use the Write tool instead.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "The absolute path to the file to modify"
+                        },
+                        "old_string": {
+                            "type": "string",
+                            "description": "The text to replace"
+                        },
+                        "new_string": {
+                            "type": "string",
+                            "description": "The text to replace it with (must be different from old_string)"
+                        },
+                        "replace_all": {
+                            "type": "boolean",
+                            "description": "Replace all occurrences of old_string (default false)"
+                        }
+                    },
+                    "required": [
+                        "path",
+                        "old_string",
+                        "new_string"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "Write",
+                "description": "Writes a file to the local filesystem.\n\nUsage:\n- This tool will overwrite the existing file if there is one at the provided path.\n- If this is an existing file, you MUST use the read_file tool first to read the file's contents.\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.\n- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "The absolute path to the file to modify"
+                        },
+                        "contents": {
+                            "type": "string",
+                            "description": "The contents to write to the file"
+                        }
+                    },
+                    "required": [
+                        "path",
+                        "contents"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "EditNotebook",
+                "description": "Use this tool to edit a jupyter notebook cell. Use ONLY this tool to edit notebooks.\n\nThis tool supports editing existing cells and creating new cells:\n\t- If you need to edit an existing cell, set 'is_new_cell' to false and provide the 'old_string' and 'new_string'.\n\t\t-- The tool will replace ONE occurrence of 'old_string' with 'new_string' in the specified cell.\n\t- If you need to create a new cell, set 'is_new_cell' to true and provide the 'new_string' (and keep 'old_string' empty).\n\t- It's critical that you set the 'is_new_cell' flag correctly!\n\t- This tool does NOT support cell deletion, but you can delete the content of a cell by passing an empty string as the 'new_string'.\n\nOther requirements:\n\t- Cell indices are 0-based.\n\t- 'old_string' and 'new_string' should be a valid cell content, i.e. WITHOUT any JSON syntax that notebook files use under the hood.\n\t- The old_string MUST uniquely identify the specific instance you want to change. This means:\n\t\t-- Include AT LEAST 3-5 lines of context BEFORE the change point\n\t\t-- Include AT LEAST 3-5 lines of context AFTER the change point\n\t- This tool can only change ONE instance at a time. If you need to change multiple instances:\n\t\t-- Make separate calls to this tool for each instance\n\t\t-- Each call must uniquely identify its specific instance using extensive context\n\t- This tool might save markdown cells as \"raw\" cells. Don't try to change it, it's fine. We need it to properly display the diff.\n\t- If you need to create a new notebook, just set 'is_new_cell' to true and cell_idx to 0.\n\t- ALWAYS generate arguments in the following order: target_notebook, cell_idx, is_new_cell, cell_language, old_string, new_string.\n\t- Prefer editing existing cells over creating new ones!\n\t- ALWAYS provide ALL required arguments (including BOTH old_string and new_string). NEVER call this tool without providing 'new_string'.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "target_notebook": {
+                            "type": "string",
+                            "description": "The path to the notebook file you want to edit. You can use either a relative path in the workspace or an absolute path. If an absolute path is provided, it will be preserved as is."
+                        },
+                        "cell_idx": {
+                            "type": "number",
+                            "description": "The index of the cell to edit (0-based)"
+                        },
+                        "is_new_cell": {
+                            "type": "boolean",
+                            "description": "If true, a new cell will be created at the specified cell index. If false, the cell at the specified cell index will be edited."
+                        },
+                        "cell_language": {
+                            "type": "string",
+                            "description": "The language of the cell to edit. Should be STRICTLY one of these: 'python', 'markdown', 'javascript', 'typescript', 'r', 'sql', 'shell', 'raw' or 'other'."
+                        },
+                        "old_string": {
+                            "type": "string",
+                            "description": "The text to replace (must be unique within the cell, and must match the cell contents exactly, including all whitespace and indentation)."
+                        },
+                        "new_string": {
+                            "type": "string",
+                            "description": "The edited text to replace the old_string or the content for the new cell."
+                        }
+                    },
+                    "required": [
+                        "target_notebook",
+                        "cell_idx",
+                        "is_new_cell",
+                        "cell_language",
+                        "old_string",
+                        "new_string"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "TodoWrite",
+                "description": "Use this tool to create and manage a structured task list for your current coding session. This helps track progress, organize complex tasks, and demonstrate thoroughness.\n\nNote: Other than when first creating todos, don't tell the user you're updating todos, just do it.\n\n### When to Use This Tool\n\nUse proactively for:\n1. Complex multi-step tasks (3+ distinct steps)\n2. Non-trivial tasks requiring careful planning\n3. User explicitly requests todo list\n4. User provides multiple tasks (numbered/comma-separated)\n5. After receiving new instructions - capture requirements as todos (use merge=false to add new ones)\n6. After completing tasks - mark complete with merge=true and add follow-ups\n7. When starting new tasks - mark as in_progress (ideally only one at a time)\n\n### When NOT to Use\n\nSkip for:\n1. Single, straightforward tasks\n2. Trivial tasks with no organizational benefit\n3. Tasks completable in < 3 trivial steps\n4. Purely conversational/informational requests\n5. Don't add a task to test the change unless asked, or you'll overfocus on testing\n\n### Examples\n\n<example>\n  User: Add dark mode toggle to settings\n  Assistant:\n    - *Creates todo list:*\n      1. Add state management [in_progress]\n      2. Implement styles\n      3. Create toggle component\n      4. Update components\n    - [Immediately begins working on todo 1 in the same tool call batch]\n<reasoning>\n  Multi-step feature with dependencies.\n</reasoning>\n</example>\n\n<example>\n  User: Rename getCwd to getCurrentWorkingDirectory across my project\n  Assistant: *Searches codebase, finds 15 instances across 8 files*\n  *Creates todo list with specific items for each file that needs updating*\n\n<reasoning>\n  Complex refactoring requiring systematic tracking across multiple files.\n</reasoning>\n</example>\n\n<example>\n  User: Implement user registration, product catalog, shopping cart, checkout flow.\n  Assistant: *Creates todo list breaking down each feature into specific tasks*\n\n<reasoning>\n  Multiple complex features provided as list requiring organized task management.\n</reasoning>\n</example>\n\n<example>\n  User: Optimize my React app - it's rendering slowly.\n  Assistant: *Analyzes codebase, identifies issues*\n  *Creates todo list: 1) Memoization, 2) Virtualization, 3) Image optimization, 4) Fix state loops, 5) Code splitting*\n\n<reasoning>\n  Performance optimization requires multiple steps across different components.\n</reasoning>\n</example>\n\n### Examples of When NOT to Use the Todo List\n\n<example>\n  User: What does git status do?\n  Assistant: Shows current state of working directory and staging area...\n\n<reasoning>\n  Informational request with no coding task to complete.\n</reasoning>\n</example>\n\n<example>\n  User: Add comment to calculateTotal function.\n  Assistant: *Uses edit tool to add comment*\n\n<reasoning>\n  Single straightforward task in one location.\n</reasoning>\n</example>\n\n<example>\n  User: Run npm install for me.\n  Assistant: *Executes npm install* Command completed successfully...\n\n<reasoning>\n  Single command execution with immediate results.\n</reasoning>\n</example>\n\n### Task States and Management\n\n1. **Task States:**\n  - pending: Not yet started\n  - in_progress: Currently working on\n  - completed: Finished successfully\n  - cancelled: No longer needed\n\n2. **Task Management:**\n  - Update status in real-time\n  - Mark complete IMMEDIATELY after finishing\n  - Only ONE task in_progress at a time\n  - Complete current tasks before starting new ones\n\n3. **Task Breakdown:**\n  - Create specific, actionable items\n  - Break complex tasks into manageable steps\n  - Use clear, descriptive names\n\n4. **Parallel Todo Writes:**\n  - Prefer creating the first todo as in_progress\n  - Start working on todos by using tool calls in the same tool call batch as the todo write\n  - Batch todo updates with other tool calls for better latency and lower costs for the user\n\nWhen in doubt, use this tool. Proactive task management demonstrates attentiveness and ensures complete requirements.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "todos": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "description": "Unique identifier for the TODO item"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "description": "The description/content of the todo item"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pending",
+                                            "in_progress",
+                                            "completed",
+                                            "cancelled"
+                                        ],
+                                        "description": "The current status of the TODO item"
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "content",
+                                    "status"
+                                ]
+                            },
+                            "description": "Array of TODO items to update or create"
+                        },
+                        "merge": {
+                            "type": "boolean",
+                            "description": "Whether to merge the todos with the existing todos. If true, the todos will be merged into the existing todos based on the id field. You can leave unchanged properties undefined. If false, the new todos will replace the existing todos."
+                        }
+                    },
+                    "required": [
+                        "todos",
+                        "merge"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "LS",
+                "description": "Lists files and directories in a given path.\nThe 'target_directory' parameter must be an absolute path.\nYou can optionally provide an array of glob patterns to ignore with the \"ignore_globs\" parameter.\n\nOther details:\n- The result does not display dot-files and dot-directories.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "target_directory": {
+                            "type": "string",
+                            "description": "Path to directory to list contents of."
+                        },
+                        "ignore_globs": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "Optional array of glob patterns to ignore.\nAll patterns match anywhere in the target directory. Patterns not starting with \"**/\" are automatically prepended with \"**/\".\n\nExamples:\n\t- \"*.js\" (becomes \"**/*.js\") - ignore all .js files\n\t- \"**/node_modules/**\" - ignore all node_modules directories\n\t- \"**/test/**/test_*.ts\" - ignore all test_*.ts files in any test directory"
+                        }
+                    },
+                    "required": [
+                        "target_directory"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "Read",
+                "description": "Reads a file from the local filesystem. You can access any file directly by using this tool.\nIf the User provides a path to a file assume that path is valid. It is okay to read a file that does not exist; an error will be returned.\n\nUsage:\n- You can optionally specify a line offset and limit (especially handy for long files), but it's recommended to read the whole file by not providing these parameters\n- Lines in the output are numbered starting at 1, using following format: LINE_NUMBER|LINE_CONTENT\n- You have the capability to call multiple tools in a single response. It is always better to speculatively read multiple files as a batch that are potentially useful.\n- If you read a file that exists but has empty contents you will receive 'File is empty.'\n\nImage Support:\n- This tool can also read image files when called with the appropriate path.\n- Supported image formats: jpeg/jpg, png, gif, webp.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "The absolute path of the file to read."
+                        },
+                        "offset": {
+                            "type": "number",
+                            "description": "The line number to start reading from. Only provide if the file is too large to read at once."
+                        },
+                        "limit": {
+                            "type": "number",
+                            "description": "The number of lines to read. Only provide if the file is too large to read at once."
+                        }
+                    },
+                    "required": [
+                        "path"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "ReadLints",
+                "description": "Read and display linter errors from the current workspace. You can provide paths to specific files or directories, or omit the argument to get diagnostics for all files.\n\n- If a file path is provided, returns diagnostics for that file only\n- If a directory path is provided, returns diagnostics for all files within that directory\n- If no path is provided, returns diagnostics for all files in the workspace\n- This tool can return linter errors that were already present before your edits, so avoid calling it with a very wide scope of files\n- NEVER call this tool on a file unless you've edited it or are about to edit it",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "paths": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "Optional. An array of paths to files or directories to read linter errors for. You can use either relative paths in the workspace or absolute paths. If provided, returns diagnostics for the specified files/directories only. If not provided, returns diagnostics for all files in the workspace."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "SemanticSearch",
+                "description": "`SemanticSearch`: semantic search that finds code by meaning, not exact text\n\n### When to Use This Tool\n\nUse `SemanticSearch` when you need to:\n- Explore unfamiliar codebases\n- Ask \"how / where / what\" questions to understand behavior\n- Find code by meaning rather than exact text\n\n### When NOT to Use\n\nSkip `SemanticSearch` for:\n1. Exact text matches (use `Grep`)\n2. Reading known files (use `Read`)\n3. Simple symbol lookups (use `Grep`)\n4. Find file by name (use `Glob`)\n\n### Examples\n\n<example>\n  Query: \"Where is interface MyInterface implemented in the frontend?\"\n<reasoning>\n  Good: Complete question asking about implementation location with specific context (frontend).\n</reasoning>\n</example>\n\n<example>\n  Query: \"Where do we encrypt user passwords before saving?\"\n<reasoning>\n  Good: Clear question about a specific process with context about when it happens.\n</reasoning>\n</example>\n\n<example>\n  Query: \"MyInterface frontend\"\n<reasoning>\n  BAD: Too vague; use a specific question instead. This would be better as \"Where is MyInterface used in the frontend?\"\n</reasoning>\n</example>\n\n<example>\n  Query: \"AuthService\"\n<reasoning>\n  BAD: Single word searches should use `Grep` for exact text matching instead.\n</reasoning>\n</example>\n\n<example>\n  Query: \"What is AuthService? How does AuthService work?\"\n<reasoning>\n  BAD: Combines two separate queries. A single semantic search is not good at looking for multiple things in parallel. Split into separate parallel searches: like \"What is AuthService?\" and \"How does AuthService work?\"\n</reasoning>\n</example>\n\n### Target Directories\n\n- Provide ONE directory or file path; [] searches the whole repo. No globs or wildcards.\n  Good:\n  - [\"backend/api/\"]   - focus directory\n  - [\"src/components/Button.tsx\"] - single file\n  - [] - search everywhere when unsure\n  BAD:\n  - [\"frontend/\", \"backend/\"] - multiple paths\n  - [\"src/**/utils/**\"] - globs\n  - [\"*.ts\"] or [\"**/*\"] - wildcard paths\n\n### Search Strategy\n\n1. Start with exploratory queries - semantic search is powerful and often finds relevant context in one go. Begin broad with [] if you're not sure where relevant code is.\n2. Review results; if a directory or file stands out, rerun with that as the target.\n3. Break large questions into smaller ones (e.g. auth roles vs session storage).\n4. For big files (>1K lines) run `SemanticSearch`, or `Grep` if you know the exact symbols you're looking for, scoped to that file instead of reading the entire file.\n\n<example>\n  Step 1: { \"query\": \"How does user authentication work?\", \"target_directories\": [], \"explanation\": \"Find auth flow\" }\n  Step 2: Suppose results point to backend/auth/ → rerun:\n          { \"query\": \"Where are user roles checked?\", \"target_directories\": [\"backend/auth/\"], \"explanation\": \"Find role logic\" }\n<reasoning>\n  Good strategy: Start broad to understand overall system, then narrow down to specific areas based on initial results.\n</reasoning>\n</example>\n\n<example>\n  Query: \"How are websocket connections handled?\"\n  Target: [\"backend/services/realtime.ts\"]\n<reasoning>\n  Good: We know the answer is in this specific file, but the file is too large to read entirely, so we use semantic search to find the relevant parts.\n</reasoning>\n</example>\n\n### Usage\n- When full chunk contents are provided, avoid re-reading the exact same chunk contents using the Read tool.\n- Sometimes, just the chunk signatures and not the full chunks will be shown. Chunk signatures are usually Class or Function signatures that chunks are contained in. Use the Read or Grep tools to explore these chunks or files if you think they might be relevant.\n- When reading chunks that weren't provided as full chunks (e.g. only as line ranges or signatures), you'll sometimes want to expand the chunk ranges to include the start of the file to see imports, expand the range to include lines from the signature, or expand the range to read multiple chunks from a file at once.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "A complete question about what you want to understand. Ask as if talking to a colleague: 'How does X work?', 'What happens when Y?', 'Where is Z handled?'"
+                        },
+                        "target_directories": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "Prefix directory paths to limit search scope (single directory only, no glob patterns)"
+                        }
+                    },
+                    "required": [
+                        "query",
+                        "target_directories"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "WebSearch",
+                "description": "Search the web for real-time information about any topic. Use this tool when you need up-to-date information that might not be available in your training data, or when you need to verify current facts. The search results will include relevant snippets and URLs from web pages. This is particularly useful for questions about current events, technology updates, or any topic that requires recent information.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "search_term": {
+                            "type": "string",
+                            "description": "The search term to look up on the web. Be specific and include relevant keywords for better results. For technical queries, include version numbers or dates if relevant."
+                        },
+                        "explanation": {
+                            "type": "string",
+                            "description": "One sentence explanation as to why this tool is being used, and how it contributes to the goal."
+                        }
+                    },
+                    "required": [
+                        "search_term"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "SwitchMode",
+                "description": "Switch the interaction mode to better match the current task. Each mode is optimized for a specific type of work.\n\n## When to Switch Modes\n\nSwitch modes proactively when:\n1. **Task type changes** - User shifts from asking questions to requesting implementation, or vice versa\n2. **Complexity emerges** - What seemed simple reveals architectural decisions or multiple approaches\n3. **Debugging needed** - An error, bug, or unexpected behavior requires investigation\n4. **Planning needed** - The task is large, ambiguous, or has significant trade-offs to discuss\n5. **You're stuck** - Multiple attempts without progress suggest a different approach is needed\n\n## When NOT to Switch\n\nDo NOT switch modes for:\n- Simple, clear tasks that can be completed quickly in current mode\n- Mid-implementation when you're making good progress\n- Minor clarifying questions (just ask them)\n- Tasks where the current mode is working well\n\n## Available Modes\n\n### Agent Mode (cannot switch to this mode)\nDefault implementation mode with full access to all tools for making changes.\n\n### Plan Mode [switchable]\nRead-only collaborative mode for designing implementation approaches before coding.\n\n**Switch to Plan when:**\n- The task has multiple valid approaches with significant trade-offs\n- Architectural decisions are needed (e.g., \"Add caching\" - Redis vs in-memory vs file-based)\n- The task touches many files or systems (large refactors, migrations)\n- Requirements are unclear and you need to explore before understanding scope\n- You would otherwise ask multiple clarifying questions\n\n**Examples:**\n- User: \"Add user authentication\" → Switch to Plan (session vs JWT, storage, middleware decisions)\n- User: \"Refactor the database layer\" → Switch to Plan (large scope, architectural impact)\n- User: \"Make the app faster\" → Switch to Plan (need to profile, multiple optimization strategies)\n\n### Debug Mode (cannot switch to this mode)\nSystematic troubleshooting mode for investigating bugs, failures, and unexpected behavior with runtime evidence.\n\n### Ask Mode (cannot switch to this mode)\nRead-only mode for exploring code and answering questions without making changes.\n\n## Important Notes\n\n- **Be proactive**: Don't wait for the user to ask you to switch modes\n- **Explain briefly**: When switching, briefly explain why in your `explanation` parameter\n- **Don't over-switch**: If the current mode is working, stay in it\n- **User approval required**: Mode switches require user consent",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "target_mode_id": {
+                            "type": "string",
+                            "description": "The mode to switch to. Allowed values: 'plan'."
+                        },
+                        "explanation": {
+                            "type": "string",
+                            "description": "Optional explanation for why the mode switch is requested. This helps the user understand why you're switching modes."
+                        }
+                    },
+                    "required": [
+                        "target_mode_id"
+                    ]
+                }
+            }
+        }
+    ],
+    "user": "auth0|user_01JRD6PGWT12V1SKWCDZTS5RVY",
+    "stream": true,
+    "stream_options": {
+        "include_usage": true
+    }
+}

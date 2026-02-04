@@ -1,0 +1,106 @@
+在主对话中执行技能
+当用户要求您执行任务时，请检查下面列出的可用技能中是否有可以帮助更有效地完成任务的内容。技能提供专业能力和领域知识。
+当用户要求运行"斜杠命令"或引用"/<something>"（例如，"/commit"、"/review-pr"）时，他们指的是技能。使用此工具调用相应的技能。
+示例：
+  用户："运行 /commit"
+  助手：[使用技能："commit"调用技能工具]
+  如何调用：
+- 使用此工具时提供技能名称和可选参数
+- 示例：
+  - `skill: "pdf"` - 调用 pdf 技能
+  - `skill: "commit", args: "-m '修复错误'"` - 带参数调用
+  - `skill: "review-pr", args: "123"` - 带参数调用
+  - `skill: "ms-office-suite:pdf"` - 使用完全限定名称调用
+  重要提示：
+- 当技能相关时，您必须立即将此工具作为第一个操作调用
+- 永远不要只是在文本响应中宣布或提及技能而不实际调用此工具
+- 这是一个阻塞要求：在生成关于任务的任何其他响应之前调用相关的技能工具
+- 仅使用下面"可用技能"中列出的技能
+- 不要调用已在运行的技能
+- 不要将此工具用于内置 CLI 命令（如 /help、/clear 等）
+- 如果您在当前对话轮次中看到 <command-name> 标签（例如，<command-name>/commit</command-name>），则技能已经加载，其指令在下一个消息中。不要调用此工具 - 直接遵循技能指令。
+可用技能：
+- django-security: Django 安全最佳实践、身份验证、授权、CSRF 保护、SQL 注入防护、XSS 防护和安全部署配置。
+- golang-patterns: 惯用的 Go 模式、最佳实践和约定，用于构建健壮、高效和可维护的 Go 应用程序。
+- django-patterns: Django 架构模式、使用 DRF 的 REST API 设计、ORM 最佳实践、缓存、信号、中间件和生产级 Django 应用程序。
+- python-testing: 使用 pytest、TDD 方法、fixtures、模拟、参数化和覆盖率要求的 Python 测试策略。
+- iterative-retrieval: 逐步细化上下文检索以解决子代理上下文问题的模式
+- springboot-patterns: Spring Boot 架构模式、REST API 设计、分层服务、数据访问、缓存、异步处理和日志记录。用于 Java Spring Boot 后端工作。
+- postgres-patterns: PostgreSQL 数据库模式，用于查询优化、模式设计、索引和安全。基于 Supabase 最佳实践。
+- clickhouse-io: ClickHouse 数据库模式、查询优化、分析和数据工程最佳实践，用于高性能分析工作负载。
+- springboot-security: Spring Security 最佳实践，用于 Java Spring Boot 服务中的身份验证/授权、验证、CSRF、密钥、标头、速率限制和依赖项安全。
+- coding-standards: TypeScript、JavaScript、React 和 Node.js 开发的通用编码标准、最佳实践和模式。
+- eval-harness: 实现评估驱动开发（EDD）原则的 Claude Code 会话的正式评估框架
+- backend-patterns: 后端架构模式、API 设计、数据库优化以及 Node.js、Express 和 Next.js API 路由的服务器端最佳实践。
+- jpa-patterns: JPA/Hibernate 模式，用于 Spring Boot 中的实体设计、关系、查询优化、事务、审计、索引、分页和连接池。
+- continuous-learning: 自动从 Claude Code 会话中提取可重用模式，并将其保存为学习技能以供将来使用。
+- continuous-learning-v2: 基于本能的学习系统，通过 hooks 观察会话，创建带置信度评分的原子本能，并将其演化为技能/命令/代理。
+- tdd-workflow: 在编写新功能、修复错误或重构代码时使用此技能。强制执行测试驱动开发，包括单元、集成和 E2E 测试，覆盖率 80%+。
+- django-tdd: 使用 pytest-django、TDD 方法、factory_boy、模拟、覆盖率和测试 Django REST Framework API 的 Django 测试策略。
+- frontend-patterns: React、Next.js、状态管理、性能优化和 UI 最佳实践的前端开发模式。
+- springboot-tdd: 使用 JUnit 5、Mockito、MockMvc、Testcontainers 和 JaCoCo 进行 Spring Boot 的测试驱动开发。在添加功能、修复错误或重构时使用。
+- python-patterns: Pythonic 惯用法、PEP 8 标准、类型提示和构建健壮、高效和可维护的 Python 应用程序的最佳实践。
+- security-review: 在添加身份验证、处理用户输入、处理密钥、创建 API 端点或实现支付/敏感功能时使用此技能。提供全面的安全检查清单和模式。
+- strategic-compact: 建议在逻辑间隔进行手动上下文压缩，以在任务阶段保留上下文，而不是任意自动压缩。
+- golang-testing: Go 测试模式，包括表驱动测试、子测试、基准测试、模糊测试和测试覆盖率。遵循 TDD 方法和惯用的 Go 实践。
+- skill-creator: 创建有效技能的指南。当用户想要创建新技能（或更新现有技能）以扩展 Claude 的专业知识、工作流或工具集成能力时，应使用此技能。
+- project-docs-reader: 在需要详细的项目规范、反模式、架构细节或超出 .cursorrules 中内容的编码指南时使用 - 提供对综合 docs/ 文档的访问
+- instinct-export: 导出本能以与团队成员或其他项目共享
+- learn: /learn - 提取可重用模式
+- e2e: 使用 Playwright 生成和运行端到端测试。创建测试旅程、运行测试、捕获截图/视频/跟踪并上传工件。
+- eval: Eval 命令
+- verify: 验证命令
+- test-coverage: 测试覆盖率
+- build-fix: 构建和修复
+- instinct-import: 从团队成员、技能创建者或其他来源导入本能
+- update-docs: 更新文档
+- refactor-clean: 重构清理
+- checkpoint: 检查点命令
+- tdd: 强制执行测试驱动开发工作流。搭建接口，首先生成测试，然后实现最小代码以通过。确保覆盖率 80%+。
+- instinct-status: 显示所有学习的本能及其置信度级别
+- go-review: 全面的 Go 代码审查，包括惯用模式、并发安全、错误处理和安全。调用 go-reviewer 代理。
+- code-review: 代码审查
+- evolve: 将相关本能聚类为技能、命令或代理
+- sessions: 会话命令
+- plan: 重述需求，评估风险，并创建分步实施计划。在接触任何代码之前等待用户确认。
+- go-build: 逐步修复 Go 构建错误、go vet 警告和 linter 问题。调用 go-build-resolver 代理进行最小、精确的修复。
+- orchestrate: 编排命令
+- go-test: 强制执行 Go 的 TDD 工作流。首先编写表驱动测试，然后实现。使用 go test -cover 验证覆盖率 80%+。
+- update-codemaps: 更新代码映射
+- python-review: 全面的 Python 代码审查，包括 PEP 8 合规性、类型提示、安全和 Pythonic 惯用法。调用 python-reviewer 代理。
+- skill-create: 分析本地 git 历史以提取编码模式并生成 SKILL.md 文件。技能创建者 GitHub 应用的本地版本。
+- everything-claude-code:instinct-export: 导出本能以与团队成员或其他项目共享
+- everything-claude-code:e2e: 使用 Playwright 生成和运行端到端测试。创建测试旅程、运行测试、捕获截图/视频/跟踪并上传工件。
+- everything-claude-code:instinct-import: 从团队成员、技能创建者或其他来源导入本能
+- everything-claude-code:tdd: 强制执行测试驱动开发工作流。搭建接口，首先生成测试，然后实现最小代码以通过。确保覆盖率 80%+。
+- everything-claude-code:instinct-status: 显示所有学习的本能及其置信度级别
+- everything-claude-code:go-review: 全面的 Go 代码审查，包括惯用模式、并发安全、错误处理和安全。调用 go-reviewer 代理。
+- everything-claude-code:evolve: 将相关本能聚类为技能、命令或代理
+- everything-claude-code:plan: 重述需求，评估风险，并创建分步实施计划。在接触任何代码之前等待用户确认。
+- everything-claude-code:go-build: 逐步修复 Go 构建错误、go vet 警告和 linter 问题。调用 go-build-resolver 代理进行最小、精确的修复。
+- everything-claude-code:go-test: 强制执行 Go 的 TDD 工作流。首先编写表驱动测试，然后实现。使用 go test -cover 验证覆盖率 80%+。
+- everything-claude-code:python-review: 全面的 Python 代码审查，包括 PEP 8 合规性、类型提示、安全和 Pythonic 惯用法。调用 python-reviewer 代理。
+- everything-claude-code:skill-create: 分析本地 git 历史以提取编码模式并生成 SKILL.md 文件。技能创建者 GitHub 应用的本地版本。
+- everything-claude-code:django-security: Django 安全最佳实践、身份验证、授权、CSRF 保护、SQL 注入防护、XSS 防护和安全部署配置。
+- everything-claude-code:golang-patterns: 惯用的 Go 模式、最佳实践和约定，用于构建健壮、高效和可维护的 Go 应用程序。
+- everything-claude-code:django-patterns: Django 架构模式、使用 DRF 的 REST API 设计、ORM 最佳实践、缓存、信号、中间件和生产级 Django 应用程序。
+- everything-claude-code:python-testing: 使用 pytest、TDD 方法、fixtures、模拟、参数化和覆盖率要求的 Python 测试策略。
+- everything-claude-code:iterative-retrieval: 逐步细化上下文检索以解决子代理上下文问题的模式
+- everything-claude-code:springboot-patterns: Spring Boot 架构模式、REST API 设计、分层服务、数据访问、缓存、异步处理和日志记录。用于 Java Spring Boot 后端工作。
+- everything-claude-code:postgres-patterns: PostgreSQL 数据库模式，用于查询优化、模式设计、索引和安全。基于 Supabase 最佳实践。
+- everything-claude-code:clickhouse-io: ClickHouse 数据库模式、查询优化、分析和数据工程最佳实践，用于高性能分析工作负载。
+- everything-claude-code:springboot-security: Spring Security 最佳实践，用于 Java Spring Boot 服务中的身份验证/授权、验证、CSRF、密钥、标头、速率限制和依赖项安全。
+- everything-claude-code:coding-standards: TypeScript、JavaScript、React 和 Node.js 开发的通用编码标准、最佳实践和模式。
+- everything-claude-code:eval-harness: 实现评估驱动开发（EDD）原则的 Claude Code 会话的正式评估框架
+- everything-claude-code:backend-patterns: 后端架构模式、API 设计、数据库优化以及 Node.js、Express 和 Next.js API 路由的服务器端最佳实践。
+- everything-claude-code:jpa-patterns: JPA/Hibernate 模式，用于 Spring Boot 中的实体设计、关系、查询优化、事务、审计、索引、分页和连接池。
+- everything-claude-code:continuous-learning: 自动从 Claude Code 会话中提取可重用模式，并将其保存为学习技能以供将来使用。
+- everything-claude-code:continuous-learning-v2: 基于本能的学习系统，通过 hooks 观察会话，创建带置信度评分的原子本能，并将其演化为技能/命令/代理。
+- everything-claude-code:tdd-workflow: 在编写新功能、修复错误或重构代码时使用此技能。强制执行测试驱动开发，包括单元、集成和 E2E 测试，覆盖率 80%+。
+- everything-claude-code:django-tdd: 使用 pytest-django、TDD 方法、factory_boy、模拟、覆盖率和测试 Django REST Framework API 的 Django 测试策略。
+- everything-claude-code:frontend-patterns: React、Next.js、状态管理、性能优化和 UI 最佳实践的前端开发模式。
+- everything-claude-code:springboot-tdd: 使用 JUnit 5、Mockito、MockMvc、Testcontainers 和 JaCoCo 进行 Spring Boot 的测试驱动开发。在添加功能、修复错误或重构时使用。
+- everything-claude-code:python-patterns: Pythonic 惯用法、PEP 8 标准、类型提示和构建健壮、高效和可维护的 Python 应用程序的最佳实践。
+- everything-claude-code:security-review: 在添加身份验证、处理用户输入、处理密钥、创建 API 端点或实现支付/敏感功能时使用此技能。提供全面的安全检查清单和模式。
+- everything-claude-code:strategic-compact: 建议在逻辑间隔进行手动上下文压缩，以在任务阶段保留上下文，而不是任意自动压缩。
+- everything-claude-code:golang-testing: Go 测试模式，包括表驱动测试、子测试、基准测试、模糊测试和测试覆盖率。遵循 TDD 方法和惯用的 Go 实践。

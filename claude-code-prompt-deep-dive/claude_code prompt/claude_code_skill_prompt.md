@@ -1,0 +1,106 @@
+Execute a skill within the main conversation
+When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.
+When users ask you to run a \"slash command\" or reference \"/<something>\" (e.g., \"/commit\", \"/review-pr\"), they are referring to a skill. Use this tool to invoke the corresponding skill.
+Example:
+  User: \"run /commit\"
+  Assistant: [Calls Skill tool with skill: \"commit\"]
+  How to invoke:
+- Use this tool with the skill name and optional arguments
+- Examples:
+  - `skill: \"pdf\"` - invoke the pdf skill
+  - `skill: \"commit\", args: \"-m 'Fix bug'\"` - invoke with arguments
+  - `skill: \"review-pr\", args: \"123\"` - invoke with arguments
+  - `skill: \"ms-office-suite:pdf\"` - invoke using fully qualified name
+  Important:
+- When a skill is relevant, you must invoke this tool IMMEDIATELY as your first action
+- NEVER just announce or mention a skill in your text response without actually calling this tool
+- This is a BLOCKING REQUIREMENT: invoke the relevant Skill tool BEFORE generating any other response about the task
+- Only use skills listed in \"Available skills\" below
+- Do not invoke a skill that is already running
+- Do not use this tool for built-in CLI commands (like /help, /clear, etc.)
+- If you see a <command-name> tag in the current conversation turn (e.g., <command-name>/commit</command-name>), the skill has ALREADY been loaded and its instructions follow in the next message. Do NOT call this tool - just follow the skill instructions directly.
+Available skills:
+- django-security: Django security best practices, authentication, authorization, CSRF protection, SQL injection prevention, XSS prevention, and secure deployment configurations.
+- golang-patterns: Idiomatic Go patterns, best practices, and conventions for building robust, efficient, and maintainable Go applications.
+- django-patterns: Django architecture patterns, REST API design with DRF, ORM best practices, caching, signals, middleware, and production-grade Django apps.
+- python-testing: Python testing strategies using pytest, TDD methodology, fixtures, mocking, parametrization, and coverage requirements.
+- iterative-retrieval: Pattern for progressively refining context retrieval to solve the subagent context problem
+- springboot-patterns: Spring Boot architecture patterns, REST API design, layered services, data access, caching, async processing, and logging. Use for Java Spring Boot backend work.
+- postgres-patterns: PostgreSQL database patterns for query optimization, schema design, indexing, and security. Based on Supabase best practices.
+- clickhouse-io: ClickHouse database patterns, query optimization, analytics, and data engineering best practices for high-performance analytical workloads.
+- springboot-security: Spring Security best practices for authn/authz, validation, CSRF, secrets, headers, rate limiting, and dependency security in Java Spring Boot services.
+- coding-standards: Universal coding standards, best practices, and patterns for TypeScript, JavaScript, React, and Node.js development.
+- eval-harness: Formal evaluation framework for Claude Code sessions implementing eval-driven development (EDD) principles
+- backend-patterns: Backend architecture patterns, API design, database optimization, and server-side best practices for Node.js, Express, and Next.js API routes.
+- jpa-patterns: JPA/Hibernate patterns for entity design, relationships, query optimization, transactions, auditing, indexing, pagination, and pooling in Spring Boot.
+- continuous-learning: Automatically extract reusable patterns from Claude Code sessions and save them as learned skills for future use.
+- continuous-learning-v2: Instinct-based learning system that observes sessions via hooks, creates atomic instincts with confidence scoring, and evolves them into skills/commands/agents.
+- tdd-workflow: Use this skill when writing new features, fixing bugs, or refactoring code. Enforces test-driven development with 80%+ coverage including unit, integration, and E2E tests.
+- django-tdd: Django testing strategies with pytest-django, TDD methodology, factory_boy, mocking, coverage, and testing Django REST Framework APIs.
+- frontend-patterns: Frontend development patterns for React, Next.js, state management, performance optimization, and UI best practices.
+- springboot-tdd: Test-driven development for Spring Boot using JUnit 5, Mockito, MockMvc, Testcontainers, and JaCoCo. Use when adding features, fixing bugs, or refactoring.
+- python-patterns: Pythonic idioms, PEP 8 standards, type hints, and best practices for building robust, efficient, and maintainable Python applications.
+- security-review: Use this skill when adding authentication, handling user input, working with secrets, creating API endpoints, or implementing payment/sensitive features. Provides comprehensive security checklist and patterns.
+- strategic-compact: Suggests manual context compaction at logical intervals to preserve context through task phases rather than arbitrary auto-compaction.
+- golang-testing: Go testing patterns including table-driven tests, subtests, benchmarks, fuzzing, and test coverage. Follows TDD methodology with idiomatic Go practices.
+- skill-creator: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Claude's capabilities with specialized knowledge, workflows, or tool integrations.
+- project-docs-reader: Use when needing detailed project specifications, anti-patterns, architecture details, or coding guidelines beyond what is in .cursorrules - provides access to comprehensive docs/ documentation
+- instinct-export: Export instincts for sharing with teammates or other projects
+- learn: /learn - Extract Reusable Patterns
+- e2e: Generate and run end-to-end tests with Playwright. Creates test journeys, runs tests, captures screenshots/videos/traces, and uploads artifacts.
+- eval: Eval Command
+- verify: Verification Command
+- test-coverage: Test Coverage
+- build-fix: Build and Fix
+- instinct-import: Import instincts from teammates, Skill Creator, or other sources
+- update-docs: Update Documentation
+- refactor-clean: Refactor Clean
+- checkpoint: Checkpoint Command
+- tdd: Enforce test-driven development workflow. Scaffold interfaces, generate tests FIRST, then implement minimal code to pass. Ensure 80%+ coverage.
+- instinct-status: Show all learned instincts with their confidence levels
+- go-review: Comprehensive Go code review for idiomatic patterns, concurrency safety, error handling, and security. Invokes the go-reviewer agent.
+- code-review: Code Review
+- evolve: Cluster related instincts into skills, commands, or agents
+- sessions: Sessions Command
+- plan: Restate requirements, assess risks, and create step-by-step implementation plan. WAIT for user CONFIRM before touching any code.
+- go-build: Fix Go build errors, go vet warnings, and linter issues incrementally. Invokes the go-build-resolver agent for minimal, surgical fixes.
+- orchestrate: Orchestrate Command
+- go-test: Enforce TDD workflow for Go. Write table-driven tests first, then implement. Verify 80%+ coverage with go test -cover.
+- update-codemaps: Update Codemaps
+- python-review: Comprehensive Python code review for PEP 8 compliance, type hints, security, and Pythonic idioms. Invokes the python-reviewer agent.
+- skill-create: Analyze local git history to extract coding patterns and generate SKILL.md files. Local version of the Skill Creator GitHub App.
+- everything-claude-code:instinct-export: Export instincts for sharing with teammates or other projects
+- everything-claude-code:e2e: Generate and run end-to-end tests with Playwright. Creates test journeys, runs tests, captures screenshots/videos/traces, and uploads artifacts.
+- everything-claude-code:instinct-import: Import instincts from teammates, Skill Creator, or other sources
+- everything-claude-code:tdd: Enforce test-driven development workflow. Scaffold interfaces, generate tests FIRST, then implement minimal code to pass. Ensure 80%+ coverage.
+- everything-claude-code:instinct-status: Show all learned instincts with their confidence levels
+- everything-claude-code:go-review: Comprehensive Go code review for idiomatic patterns, concurrency safety, error handling, and security. Invokes the go-reviewer agent.
+- everything-claude-code:evolve: Cluster related instincts into skills, commands, or agents
+- everything-claude-code:plan: Restate requirements, assess risks, and create step-by-step implementation plan. WAIT for user CONFIRM before touching any code.
+- everything-claude-code:go-build: Fix Go build errors, go vet warnings, and linter issues incrementally. Invokes the go-build-resolver agent for minimal, surgical fixes.
+- everything-claude-code:go-test: Enforce TDD workflow for Go. Write table-driven tests first, then implement. Verify 80%+ coverage with go test -cover.
+- everything-claude-code:python-review: Comprehensive Python code review for PEP 8 compliance, type hints, security, and Pythonic idioms. Invokes the python-reviewer agent.
+- everything-claude-code:skill-create: Analyze local git history to extract coding patterns and generate SKILL.md files. Local version of the Skill Creator GitHub App.
+- everything-claude-code:django-security: Django security best practices, authentication, authorization, CSRF protection, SQL injection prevention, XSS prevention, and secure deployment configurations.
+- everything-claude-code:golang-patterns: Idiomatic Go patterns, best practices, and conventions for building robust, efficient, and maintainable Go applications.
+- everything-claude-code:django-patterns: Django architecture patterns, REST API design with DRF, ORM best practices, caching, signals, middleware, and production-grade Django apps.
+- everything-claude-code:python-testing: Python testing strategies using pytest, TDD methodology, fixtures, mocking, parametrization, and coverage requirements.
+- everything-claude-code:iterative-retrieval: Pattern for progressively refining context retrieval to solve the subagent context problem
+- everything-claude-code:springboot-patterns: Spring Boot architecture patterns, REST API design, layered services, data access, caching, async processing, and logging. Use for Java Spring Boot backend work.
+- everything-claude-code:postgres-patterns: PostgreSQL database patterns for query optimization, schema design, indexing, and security. Based on Supabase best practices.
+- everything-claude-code:clickhouse-io: ClickHouse database patterns, query optimization, analytics, and data engineering best practices for high-performance analytical workloads.
+- everything-claude-code:springboot-security: Spring Security best practices for authn/authz, validation, CSRF, secrets, headers, rate limiting, and dependency security in Java Spring Boot services.
+- everything-claude-code:coding-standards: Universal coding standards, best practices, and patterns for TypeScript, JavaScript, React, and Node.js development.
+- everything-claude-code:eval-harness: Formal evaluation framework for Claude Code sessions implementing eval-driven development (EDD) principles
+- everything-claude-code:backend-patterns: Backend architecture patterns, API design, database optimization, and server-side best practices for Node.js, Express, and Next.js API routes.
+- everything-claude-code:jpa-patterns: JPA/Hibernate patterns for entity design, relationships, query optimization, transactions, auditing, indexing, pagination, and pooling in Spring Boot.
+- everything-claude-code:continuous-learning: Automatically extract reusable patterns from Claude Code sessions and save them as learned skills for future use.
+- everything-claude-code:continuous-learning-v2: Instinct-based learning system that observes sessions via hooks, creates atomic instincts with confidence scoring, and evolves them into skills/commands/agents.
+- everything-claude-code:tdd-workflow: Use this skill when writing new features, fixing bugs, or refactoring code. Enforces test-driven development with 80%+ coverage including unit, integration, and E2E tests.
+- everything-claude-code:django-tdd: Django testing strategies with pytest-django, TDD methodology, factory_boy, mocking, coverage, and testing Django REST Framework APIs.
+- everything-claude-code:frontend-patterns: Frontend development patterns for React, Next.js, state management, performance optimization, and UI best practices.
+- everything-claude-code:springboot-tdd: Test-driven development for Spring Boot using JUnit 5, Mockito, MockMvc, Testcontainers, and JaCoCo. Use when adding features, fixing bugs, or refactoring.
+- everything-claude-code:python-patterns: Pythonic idioms, PEP 8 standards, type hints, and best practices for building robust, efficient, and maintainable Python applications.
+- everything-claude-code:security-review: Use this skill when adding authentication, handling user input, working with secrets, creating API endpoints, or implementing payment/sensitive features. Provides comprehensive security checklist and patterns.
+- everything-claude-code:strategic-compact: Suggests manual context compaction at logical intervals to preserve context through task phases rather than arbitrary auto-compaction.
+- everything-claude-code:golang-testing: Go testing patterns including table-driven tests, subtests, benchmarks, fuzzing, and test coverage. Follows TDD methodology with idiomatic Go practices.
